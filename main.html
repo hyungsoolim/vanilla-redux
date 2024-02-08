@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/redux/4.0.1/redux.js"></script>
+</head>
+<body>
+
+<div id="subject"></div>
+<div id="toc"></div>
+<div id="control"></div>
+<div id="content"></div>
+
+<script>
+  const reducer = (state, action) => {
+    if (state === undefined) {
+      return {
+        mode: "read",
+        max_id: 2,
+        contents: [
+          {id: 1, title: "HTML", desc: "HTML is ..."},
+          {id: 2, title: "CSS", desc: "CSS is ..."}
+        ],
+        selected_id: 1
+      }
+    }
+
+    let newState;
+    let newContents;
+    if (action.type === "SELECT") {
+      newState = Object.assign({}, state, {selected_id: action.id, mode: "read"})
+    }
+
+    if (action.type === "CHANGE_MODE") {
+      newState = Object.assign({}, state, {mode: action.mode})
+    }
+
+    if (action.type === "CREATE") {
+      const newMaxId = state.max_id + 1;
+      newContents = state.contents.concat();
+      newContents.push({id: newMaxId, title: action.title, desc: action.desc});
+
+      newState = Object.assign({}, state, {max_id: newMaxId, contents: newContents, mode: "read"});
+    }
+
+    if (action.type === "DELETE") {
+      newContents = state.contents.filter((content) => content.id !== state.selected_id);
+      newState = Object.assign({}, state, {contents: newContents, mode: "welcome"});
+    }
+
+    console.log(action, state, newState)
+
+    return newState;
+  }
+  const store = Redux.createStore(reducer, window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__());
+
+  const subject = () => {
+    document.querySelector("#subject").innerHTML = `
+      <header>
+        <h1>WEB</h1>
+        Hello, WEB!
+      </header>
+    `;
+  }
+  const TOC = () => {
+    const state = store.getState();
+    document.querySelector("#toc").innerHTML = `
+        <nav>
+          <ol>
+            ${state.contents.map((content) => `
+              <li><a href="#"
+              onClick="
+                store.dispatch({type: 'SELECT', id: ${content.id}})
+              "
+              >${content.title}</a></li>
+            `).join("")}
+          </ol>
+        </nav>
+      `;
+  }
+  const control = () => {
+    document.querySelector("#control").innerHTML = `
+        <ul>
+          <li><input type="button" value="create"
+          onclick="store.dispatch({type: 'CHANGE_MODE', mode: 'create'})"
+          /></li>
+          <li><input type="button" value="delete"
+          onclick="store.dispatch({ type: 'DELETE'})"
+          /></li>
+        </ul>
+      `;
+  }
+  const article = () => {
+    const state = store.getState();
+    if (state.mode === "create") {
+      document.querySelector("#content").innerHTML = `
+        <article>
+          <form
+          onsubmit="
+          event.preventDefault();
+          store.dispatch({
+            type: 'CREATE',
+            title: this.title.value,
+            desc: this.desc.value
+          })
+          ">
+            <p>
+              <input type="text" name="title" placeholder="title" />
+            </p>
+            <p>
+              <textarea name="desc" placeholder="description"></textarea>
+            </p>
+            <p>
+              <input type="submit"/>
+            </p>
+          </form>
+        </article>
+      `;
+    } else if (state.mode === "read") {
+      document.querySelector("#content").innerHTML = `
+          <article>
+          ${state.contents
+                 .filter((content) => content.id === state.selected_id)
+                 .map(content => `
+                    <h2>${content.title}</h2>
+                        ${content.desc}
+                  `)
+      }
+          </article>
+        `;
+    } else if (state.mode === "welcome") {
+      document.querySelector("#content").innerHTML = `
+          <article>
+            <h2>Welcome</h2>
+            Hello, Redux!!!
+          </article>
+        `;
+    }
+  }
+
+  subject();
+
+  TOC();
+  store.subscribe(TOC);
+  control();
+
+  article();
+  store.subscribe(article);
+</script>
+</body>
+</html>
